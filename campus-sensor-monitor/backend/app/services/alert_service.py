@@ -1,4 +1,3 @@
-
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -19,9 +18,11 @@ class AlertService:
         sensor_id: str | None = None,
         limit: int = 100,
         offset: int = 0,
+        status_filter: str | None = None,
     ) -> list[Alert]:
+        filter_status = status if status is not None else status_filter
         return await self.repository.list_alerts(
-            status=status,
+            status=filter_status,
             sensor_id=sensor_id,
             limit=limit,
             offset=offset,
@@ -36,9 +37,9 @@ class AlertService:
         acknowledged_by: str,
     ) -> Alert | None:
         alert = await self.repository.get_by_id(alert_id)
-
         if alert is None:
             return None
+
         if alert.status != "open":
             raise ValueError("Only open alerts can be acknowledged")
 
@@ -62,9 +63,9 @@ class AlertService:
         resolution_note: str | None = None,
     ) -> Alert | None:
         alert = await self.repository.get_by_id(alert_id)
-
         if alert is None:
             return None
+
         if alert.status == "resolved":
             raise ValueError("Alert is already resolved")
 

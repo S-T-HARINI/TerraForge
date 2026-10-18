@@ -1,5 +1,5 @@
-
 from fastapi import APIRouter, HTTPException, status
+
 from backend.app.schemas.reading import (
     ReadingBatchCreate,
     ReadingBatchResponse,
@@ -9,22 +9,38 @@ from backend.app.services.ingestion_service import IngestionService
 
 router = APIRouter(prefix="/readings", tags=["Sensor Readings"])
 
-@router.post("", response_model=ReadingBatchResponse, status_code=status.HTTP_202_ACCEPTED)
-async def ingest_reading(reading: SensorReadingCreate):
+
+@router.post(
+    "",
+    response_model=ReadingBatchResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def ingest_reading(reading: SensorReadingCreate) -> ReadingBatchResponse:
     try:
         accepted = await IngestionService().ingest(reading)
-        return ReadingBatchResponse(accepted=accepted)
+        return ReadingBatchResponse(
+            accepted=accepted,
+            message="Sensor reading queued successfully",
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Unable to queue sensor reading",
         ) from exc
 
-@router.post("/batch", response_model=ReadingBatchResponse, status_code=status.HTTP_202_ACCEPTED)
-async def ingest_batch(batch: ReadingBatchCreate):
+
+@router.post(
+    "/batch",
+    response_model=ReadingBatchResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def ingest_batch(batch: ReadingBatchCreate) -> ReadingBatchResponse:
     try:
         accepted = await IngestionService().ingest_batch(batch.readings)
-        return ReadingBatchResponse(accepted=accepted)
+        return ReadingBatchResponse(
+            accepted=accepted,
+            message=f"Accepted {accepted} sensor readings for processing",
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

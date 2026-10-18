@@ -1,4 +1,4 @@
-
+import logging
 import operator
 from datetime import timedelta, timezone
 
@@ -11,6 +11,8 @@ from backend.app.repositories.alert_repository import AlertRepository
 from backend.app.repositories.reading_repository import ReadingRepository
 from backend.app.repositories.rule_repository import RuleRepository
 from backend.app.schemas.reading import SensorReadingCreate
+
+logger = logging.getLogger(__name__)
 
 OPERATORS = {
     ">": operator.gt,
@@ -32,6 +34,7 @@ class WindowService:
     async def evaluate_reading(
         self,
         reading: SensorReadingCreate,
+        acquired_dedup_keys: list[str] | None = None,
     ) -> list[Alert]:
         rules = await self.rule_repository.list_all(
             enabled_only=True,
@@ -77,15 +80,27 @@ class WindowService:
                 f"terraforge:alert:dedup:{rule.id}:{reading.sensor_id}"
             )
 
-            reserved = await redis_client.set(
-                dedup_key,
-                "1",
-                ex=max(settings.alert_deduplication_seconds, 1),
-                nx=True,
-            )
+            reserved = True
+            dedup_ttl = max(settings.alert_deduplication_seconds, 1)
+            try:
+                result = await redis_client.set(
+                    dedup_key,
+                    "1",
+                    ex=dedup_ttl,
+                    nx=True,
+                )
+                if not result:
+                    reserved = False
+            except Exception as exc:
+                logger.warning(
+                    "Redis error during window alert deduplication check: %s", exc
+                )
 
             if not reserved:
                 continue
+
+            if acquired_dedup_keys is not None:
+                acquired_dedup_keys.append(dedup_key)
 
             alert = Alert(
                 rule_id=rule.id,
@@ -96,7 +111,7 @@ class WindowService:
                     f"over {rule.window_seconds} seconds is {average:.2f}; "
                     f"threshold {rule.operator} {rule.threshold}"
                 ),
-                observed_value=average,
+                observed_value=round(average, 4),
                 status="open",
                 triggered_at=end_time.astimezone(timezone.utc),
                 details={
@@ -111,7 +126,19 @@ class WindowService:
                 },
             )
 
-            await self.alert_repository.create(alert)
-            generated_alerts.append(alert)
+            try:
+                await self.alert_repository.create(alert)
+                generated_alerts.append(alert)
+            except Exception:
+                try:
+                    await redis_client.delete(dedup_key)
+                except Exception:
+                    pass
+                if (
+                    acquired_dedup_keys is not None
+                    and dedup_key in acquired_dedup_keys
+                ):
+                    acquired_dedup_keys.remove(dedup_key)
+                raise
 
         return generated_alerts

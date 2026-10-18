@@ -1,16 +1,14 @@
-
 from datetime import datetime
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-
 
 SensorId = Annotated[str, Field(min_length=1, max_length=150)]
 ReadingType = Annotated[str, Field(min_length=1, max_length=100)]
 
 
 class SensorReadingCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     sensor_id: SensorId = Field(validation_alias="sensorId")
     reading_type: ReadingType = Field(validation_alias="type")
@@ -46,4 +44,4 @@ class ReadingBatchCreate(BaseModel):
 
 class ReadingBatchResponse(BaseModel):
     accepted: int
-    message: str
+    message: str = "Readings accepted for processing"

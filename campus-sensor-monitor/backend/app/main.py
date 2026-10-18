@@ -1,16 +1,18 @@
-
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from backend.app.api.router import api_router
+from backend.app.api.routes import health
 from backend.app.config import settings
+from backend.app.core.logging import setup_logging
 from backend.app.core.redis import close_redis
 from backend.app.db.session import dispose_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging()
     try:
         yield
     finally:
@@ -24,6 +26,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Root-level health endpoints (e.g. for container healthchecks)
+app.include_router(health.router)
+
+# Versioned API routes
 app.include_router(api_router, prefix=settings.api_prefix)
 
 
