@@ -4,12 +4,13 @@ from datetime import timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.config import settings
+from backend.app.core.redis import redis_client
 from backend.app.models.alert import Alert
 from backend.app.repositories.alert_repository import AlertRepository
 from backend.app.repositories.reading_repository import ReadingRepository
 from backend.app.repositories.rule_repository import RuleRepository
 from backend.app.schemas.reading import SensorReadingCreate
-
 
 OPERATORS = {
     ">": operator.gt,
@@ -49,7 +50,9 @@ class WindowService:
                 continue
 
             end_time = reading.timestamp
-            start_time = end_time - timedelta(seconds=rule.window_seconds)
+            start_time = end_time - timedelta(
+                seconds=rule.window_seconds
+            )
 
             readings = await self.reading_repository.get_window(
                 sensor_id=reading.sensor_id,
@@ -64,7 +67,24 @@ class WindowService:
             average = sum(item.value for item in readings) / len(readings)
             comparison = OPERATORS.get(rule.operator)
 
-            if comparison is None or not comparison(average, rule.threshold):
+            if comparison is None:
+                continue
+
+            if not comparison(average, rule.threshold):
+                continue
+
+            dedup_key = (
+                f"terraforge:alert:dedup:{rule.id}:{reading.sensor_id}"
+            )
+
+            reserved = await redis_client.set(
+                dedup_key,
+                "1",
+                ex=max(settings.alert_deduplication_seconds, 1),
+                nx=True,
+            )
+
+            if not reserved:
                 continue
 
             alert = Alert(
@@ -90,6 +110,7 @@ class WindowService:
                     "window_end": end_time.isoformat(),
                 },
             )
+
             await self.alert_repository.create(alert)
             generated_alerts.append(alert)
 
