@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.config import settings
 from backend.app.core.redis import redis_client
 from backend.app.models.alert import Alert
+from backend.app.models.alert_rule import AlertRule
 from backend.app.repositories.alert_repository import AlertRepository
 from backend.app.repositories.reading_repository import ReadingRepository
 from backend.app.repositories.rule_repository import RuleRepository
@@ -35,11 +36,13 @@ class WindowService:
         self,
         reading: SensorReadingCreate,
         acquired_dedup_keys: list[str] | None = None,
+        rules: list[AlertRule] | None = None,
     ) -> list[Alert]:
-        rules = await self.rule_repository.list_all(
-            enabled_only=True,
-            limit=10000,
-        )
+        if rules is None:
+            rules = await self.rule_repository.list_all(
+                enabled_only=True,
+                limit=10000,
+            )
         generated_alerts: list[Alert] = []
 
         for rule in rules:

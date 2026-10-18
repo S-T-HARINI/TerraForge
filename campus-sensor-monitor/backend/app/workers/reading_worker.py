@@ -10,6 +10,7 @@ from backend.app.config import settings
 from backend.app.core.redis import redis_client
 from backend.app.db.session import AsyncSessionLocal
 from backend.app.repositories.reading_repository import ReadingRepository
+from backend.app.repositories.rule_repository import RuleRepository
 from backend.app.schemas.reading import SensorReadingCreate
 from backend.app.services.evaluation_service import EvaluationService
 from backend.app.services.window_service import WindowService
@@ -41,20 +42,26 @@ async def process_batch(session: AsyncSession, payloads: Sequence[str]) -> int:
 
     evaluation = EvaluationService(session)
     window_service = WindowService(session)
+    rule_repository = RuleRepository(session)
     acquired_dedup_keys: list[str] = []
 
     try:
         repository = ReadingRepository(session)
         accepted = await repository.create_many(valid_readings)
 
+        # Preload active rules once per batch for high throughput
+        active_rules = await rule_repository.list_all(enabled_only=True, limit=10000)
+
         for reading in valid_readings:
             await evaluation.evaluate_reading(
                 reading,
                 acquired_dedup_keys=acquired_dedup_keys,
+                rules=active_rules,
             )
             await window_service.evaluate_reading(
                 reading,
                 acquired_dedup_keys=acquired_dedup_keys,
+                rules=active_rules,
             )
 
         await session.commit()

@@ -38,11 +38,13 @@ class EvaluationService:
         self,
         reading: SensorReadingCreate,
         acquired_dedup_keys: list[str] | None = None,
+        rules: list[AlertRule] | None = None,
     ) -> list[Alert]:
-        rules = await self.rule_repository.list_all(
-            enabled_only=True,
-            limit=10000,
-        )
+        if rules is None:
+            rules = await self.rule_repository.list_all(
+                enabled_only=True,
+                limit=10000,
+            )
         generated_alerts: list[Alert] = []
 
         for rule in rules:
