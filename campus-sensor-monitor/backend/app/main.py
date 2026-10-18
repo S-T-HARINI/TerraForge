@@ -14,6 +14,12 @@ from backend.app.db.session import dispose_db
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
+    if settings.database_url.startswith("sqlite"):
+        from backend.app.db.base import Base
+        from backend.app.db.session import engine
+        import backend.app.models  # noqa: F401
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
     try:
         yield
     finally:
