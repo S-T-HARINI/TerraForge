@@ -1,6 +1,5 @@
 
 import asyncio
-import json
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,21 +15,20 @@ from backend.app.services.window_service import WindowService
 logger = logging.getLogger(__name__)
 
 
-async def process_batch(
-    session: AsyncSession,
-    payloads: list[str],
-) -> int:
+async def process_batch(session: AsyncSession, payloads: list[str]) -> int:
     readings = [
         SensorReadingCreate.model_validate_json(payload)
         for payload in payloads
     ]
-
-    ingestion = IngestionService(session)
+    ingestion = IngestionService()
     evaluation = EvaluationService(session)
     window_service = WindowService(session)
 
     try:
-        accepted = await ingestion.reading_repository.create_many(readings)
+        from backend.app.repositories.reading_repository import ReadingRepository
+
+        repository = ReadingRepository(session)
+        accepted = await repository.create_many(readings)
 
         for reading in readings:
             await evaluation.evaluate_reading(reading)
@@ -50,32 +48,24 @@ async def run_worker() -> None:
     logger.info("TerraForge reading worker started")
 
     while True:
-        first_item = await redis_client.blpop(
-            queue_name,
-            timeout=settings.worker_block_ms // 1000,
-        )
-
-        if first_item is None:
+        item = await redis_client.blpop(queue_name, timeout=1)
+        if item is None:
             continue
 
-        payloads = [first_item[1]]
+        payloads = [item[1]]
 
         while len(payloads) < batch_size:
-            item = await redis_client.lpop(queue_name)
-            if item is None:
+            next_item = await redis_client.lpop(queue_name)
+            if next_item is None:
                 break
-            payloads.append(item)
+            payloads.append(next_item)
 
         try:
             async with AsyncSessionLocal() as session:
                 await process_batch(session, payloads)
             logger.info("Processed %s sensor readings", len(payloads))
         except Exception:
-            logger.exception(
-                "Failed to process a batch of %s readings",
-                len(payloads),
-            )
-            # Requeue failed items rather than silently discarding them.
+            logger.exception("Failed to process a batch of %s readings", len(payloads))
             await redis_client.rpush(queue_name, *payloads)
             await asyncio.sleep(1)
 
