@@ -229,16 +229,18 @@ export default function HealthPage() {
 
             <div className="p-3 rounded-md bg-slate-50 border border-slate-100 text-xs font-mono space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-slate-400">Driver:</span>
-                <span className="text-slate-800">asyncpg / SQLAlchemy</span>
+                <span className="text-slate-400">Connection:</span>
+                <span className="text-slate-800">
+                  {readiness?.database === "connected" ? "Active (PostgreSQL / SQLite)" : "Offline"}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Probe:</span>
-                <span className="text-slate-800">SELECT 1</span>
+                <span className="text-slate-400">Probe Response:</span>
+                <span className="text-slate-800">{readiness?.database || "Offline"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Port:</span>
-                <span className="text-slate-800">5432</span>
+                <span className="text-slate-400">ORM / Driver:</span>
+                <span className="text-slate-800">SQLAlchemy 2.x Async</span>
               </div>
             </div>
           </div>
@@ -267,16 +269,16 @@ export default function HealthPage() {
 
             <div className="p-3 rounded-md bg-slate-50 border border-slate-100 text-xs font-mono space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-slate-400">Queue Name:</span>
+                <span className="text-slate-400">Queue Buffer:</span>
                 <span className="text-slate-800">terraforge:readings</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Probe:</span>
-                <span className="text-slate-800">PING / PONG</span>
+                <span className="text-slate-400">Probe Response:</span>
+                <span className="text-slate-800">{readiness?.redis || "Offline"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Port:</span>
-                <span className="text-slate-800">6379</span>
+                <span className="text-slate-400">Dedup Key Prefix:</span>
+                <span className="text-slate-800">terraforge:alert:dedup:*</span>
               </div>
             </div>
           </div>

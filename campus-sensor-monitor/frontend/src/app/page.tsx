@@ -35,40 +35,30 @@ const SENSOR_CATEGORIES = [
     name: "Temperature",
     icon: Thermometer,
     unit: "°C",
-    nominalRange: "18.0 - 28.0 °C",
-    typicalThreshold: "> 30.0 °C",
   },
   {
     type: "humidity",
     name: "Relative Humidity",
     icon: Droplets,
     unit: "%",
-    nominalRange: "30.0 - 60.0 %",
-    typicalThreshold: "> 70.0 %",
   },
   {
     type: "co2",
     name: "Carbon Dioxide",
     icon: Wind,
     unit: " ppm",
-    nominalRange: "400 - 900 ppm",
-    typicalThreshold: "> 1000 ppm",
   },
   {
     type: "noise",
     name: "Acoustic Noise",
     icon: Volume2,
     unit: " dB",
-    nominalRange: "35.0 - 70.0 dB",
-    typicalThreshold: "> 85.0 dB",
   },
   {
     type: "power",
     name: "Power Consumption",
     icon: Zap,
     unit: " W",
-    nominalRange: "100 - 500 W",
-    typicalThreshold: "> 800 W",
   },
 ];
 
@@ -334,13 +324,31 @@ export default function OverviewPage() {
                       {cat.name}
                     </span>
                     <span className="text-[11px] font-mono text-slate-500 block mt-0.5">
-                      Nominal: {cat.nominalRange}
+                      {matchingAlerts.length > 0
+                        ? `Latest incident: ${matchingAlerts[0].observed_value}${cat.unit}`
+                        : "Status: No active alerts"}
                     </span>
                   </div>
 
                   <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                     <span>Rules: {matchingRules.length}</span>
-                    <span className="font-mono text-slate-400">{cat.typicalThreshold}</span>
+                    <span
+                      className="font-mono text-slate-400 truncate max-w-[120px]"
+                      title={
+                        matchingRules.length > 0
+                          ? matchingRules
+                              .map((r) => `${r.operator} ${r.threshold}${cat.unit}`)
+                              .join(", ")
+                          : "No configured rules"
+                      }
+                    >
+                      {matchingRules.length > 0
+                        ? matchingRules
+                            .map((r) => `${r.operator} ${r.threshold}${cat.unit}`)
+                            .slice(0, 2)
+                            .join(", ")
+                        : "No rules"}
+                    </span>
                   </div>
                 </div>
               );

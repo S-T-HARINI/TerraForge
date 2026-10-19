@@ -9,15 +9,15 @@ import {
 import { Header } from "@/components/Header";
 import { api, SensorReadingPayload } from "@/lib/api";
 
-const SENSOR_POOL = [
-  "sensor-lib-01",
-  "sensor-lib-02",
-  "sensor-lab-01",
-  "sensor-lab-02",
-  "sensor-hall-01",
-  "sensor-hall-02",
-  "sensor-dorm-01",
-  "sensor-dorm-02",
+const DEFAULT_SIM_POOL = [
+  "sensor-sim-01",
+  "sensor-sim-02",
+  "sensor-sim-03",
+  "sensor-sim-04",
+  "sensor-sim-05",
+  "sensor-sim-06",
+  "sensor-sim-07",
+  "sensor-sim-08",
 ];
 
 const RANGES: Record<string, { min: number; max: number; spikeMin: number; spikeMax: number }> = {
@@ -31,6 +31,7 @@ const RANGES: Record<string, { min: number; max: number; spikeMin: number; spike
 export default function SimulatorPage() {
   const [selectedType, setSelectedType] = useState<string>("temperature");
   const [targetSensor, setTargetSensor] = useState<string>("random");
+  const [customSensorId, setCustomSensorId] = useState<string>("sensor-test-01");
   const [batchSize, setBatchSize] = useState<number>(100);
   const [totalBatches, setTotalBatches] = useState<number>(5);
   const [anomalyRatio, setAnomalyRatio] = useState<number>(10); // 10%
@@ -72,7 +73,9 @@ export default function SimulatorPage() {
 
       const sensor =
         targetSensor === "random"
-          ? SENSOR_POOL[Math.floor(Math.random() * SENSOR_POOL.length)]
+          ? DEFAULT_SIM_POOL[Math.floor(Math.random() * DEFAULT_SIM_POOL.length)]
+          : targetSensor === "custom"
+          ? (customSensorId.trim() || "sensor-test-01")
           : targetSensor;
 
       batch.push({
@@ -241,13 +244,26 @@ export default function SimulatorPage() {
                 onChange={(e) => setTargetSensor(e.target.value)}
                 className="w-full px-3 py-1.5 rounded-md border border-slate-200 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
               >
-                <option value="random">Randomize Across Campus Pool</option>
-                {SENSOR_POOL.map((s) => (
+                <option value="random">Randomize (sensor-sim-01 ... 08)</option>
+                <option value="custom">Custom Sensor ID...</option>
+                {DEFAULT_SIM_POOL.map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>
                 ))}
               </select>
+              {targetSensor === "custom" && (
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    disabled={isRunning}
+                    value={customSensorId}
+                    onChange={(e) => setCustomSensorId(e.target.value)}
+                    placeholder="e.g. sensor-custom-01"
+                    className="w-full px-3 py-1.5 rounded-md border border-slate-200 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
