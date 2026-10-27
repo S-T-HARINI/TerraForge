@@ -1,6 +1,7 @@
 
 from uuid import UUID
 
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models.alert_rule import AlertRule
@@ -61,7 +62,10 @@ class RuleService:
         }
         merged.update(updates)
 
-        validated = AlertRuleCreate.model_validate(merged)
+        try:
+            validated = AlertRuleCreate.model_validate(merged)
+        except ValidationError as exc:
+            raise ValueError(str(exc)) from exc
 
         try:
             updated_rule = await self.repository.update(rule, AlertRuleUpdate(
