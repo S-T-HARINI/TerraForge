@@ -84,20 +84,21 @@ class WindowService:
             )
 
             reserved = True
-            dedup_ttl = max(settings.alert_deduplication_seconds, 1)
-            try:
-                result = await redis_client.set(
-                    dedup_key,
-                    "1",
-                    ex=dedup_ttl,
-                    nx=True,
-                )
-                if not result:
-                    reserved = False
-            except Exception as exc:
-                logger.warning(
-                    "Redis error during window alert deduplication check: %s", exc
-                )
+            dedup_ttl = settings.alert_deduplication_seconds
+            if dedup_ttl > 0:
+                try:
+                    result = await redis_client.set(
+                        dedup_key,
+                        "1",
+                        ex=dedup_ttl,
+                        nx=True,
+                    )
+                    if not result:
+                        reserved = False
+                except Exception as exc:
+                    logger.warning(
+                        "Redis error during window alert deduplication check: %s", exc
+                    )
 
             if not reserved:
                 continue
