@@ -135,8 +135,13 @@ export default function SimulatorPage() {
   };
 
   const handle10kBurst = async () => {
-    setBatchSize(1000);
-    setTotalBatches(10);
+    // Use local constants — setBatchSize/setTotalBatches are async so
+    // reading state immediately after setting it would yield stale values.
+    const BURST_BATCH_SIZE = 1000;
+    const BURST_TOTAL_BATCHES = 10;
+
+    setBatchSize(BURST_BATCH_SIZE);
+    setTotalBatches(BURST_TOTAL_BATCHES);
     setIsRunning(true);
     setProgress(0);
     setTotalAccepted(0);
@@ -146,7 +151,7 @@ export default function SimulatorPage() {
     addLog("Initiating 10,000 Readings Burst Test (10 batches x 1,000 readings concurrently)...", true);
     const startTime = performance.now();
 
-    const batches = Array.from({ length: 10 }, () => generateBatchPayload(1000));
+    const batches = Array.from({ length: BURST_TOTAL_BATCHES }, () => generateBatchPayload(BURST_BATCH_SIZE));
     let accepted = 0;
     let failed = 0;
 
@@ -159,7 +164,7 @@ export default function SimulatorPage() {
         addLog(`Concurrent Batch #${idx + 1} (1,000 readings) accepted in ${lat} ms`, true);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        failed += 1000;
+        failed += BURST_BATCH_SIZE;
         addLog(`Concurrent Batch #${idx + 1} failed: ${msg}`, false);
       }
     });
