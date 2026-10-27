@@ -30,13 +30,11 @@ class AlertRepository:
         sensor_id: str | None = None,
         limit: int = 100,
         offset: int = 0,
-        status_filter: str | None = None,
     ) -> list[Alert]:
         statement = select(Alert)
 
-        filter_status = status if status is not None else status_filter
-        if filter_status is not None:
-            statement = statement.where(Alert.status == filter_status)
+        if status is not None:
+            statement = statement.where(Alert.status == status)
 
         if sensor_id is not None:
             statement = statement.where(Alert.sensor_id == sensor_id)
