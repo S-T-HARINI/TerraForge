@@ -98,7 +98,7 @@ export interface AlertResolveRequest {
   resolution_note?: string | null;
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   status: number;
   data: unknown;
 
