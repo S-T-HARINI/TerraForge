@@ -18,11 +18,9 @@ class AlertService:
         sensor_id: str | None = None,
         limit: int = 100,
         offset: int = 0,
-        status_filter: str | None = None,
     ) -> list[Alert]:
-        filter_status = status if status is not None else status_filter
         return await self.repository.list_alerts(
-            status=filter_status,
+            status=status,
             sensor_id=sensor_id,
             limit=limit,
             offset=offset,
