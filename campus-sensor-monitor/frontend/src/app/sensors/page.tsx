@@ -223,17 +223,28 @@ export default function SensorsPage() {
     }
 
     const now = new Date().toISOString();
-    const formattedReadings = parsed.map((item, idx) => {
-      if (!item.sensorId || !item.type || typeof item.value !== "number") {
-        throw new Error(`Item at index ${idx} is missing sensorId, type, or valid numeric value.`);
-      }
-      return {
-        sensorId: String(item.sensorId).trim(),
-        type: String(item.type).trim(),
-        value: Number(item.value),
-        timestamp: item.timestamp || now,
-      };
-    });
+    let formattedReadings: Array<{ sensorId: string; type: string; value: number; timestamp: string }>;
+    try {
+      formattedReadings = parsed.map((item, idx) => {
+        if (!item.sensorId || !item.type || typeof item.value !== "number") {
+          throw new Error(`Item at index ${idx} is missing sensorId, type, or valid numeric value.`);
+        }
+        return {
+          sensorId: String(item.sensorId).trim(),
+          type: String(item.type).trim(),
+          value: Number(item.value),
+          timestamp: item.timestamp || now,
+        };
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Invalid reading item";
+      setBatchFeedback({
+        success: false,
+        message: `Validation Error: ${msg}`,
+      });
+      setIsSubmittingBatch(false);
+      return;
+    }
 
     try {
       const res = await api.ingestBatch(formattedReadings);
